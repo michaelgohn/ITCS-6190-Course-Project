@@ -1,7 +1,6 @@
-# Data ingestion script placeholder
 from utils import get_spark_session, get_logger
-from pyspark.sql.functions import col, to_timestamp, when, dayofweek, year, month, day, hour, minute
-from pyspark.sql.functions import radians, sin, cos, sqrt, atan2, avg, trim, pi
+from pyspark.sql.functions import col, to_timestamp, when, dayofweek
+from pyspark.sql.functions import radians, sin, cos, sqrt, atan2, avg, trim, mean
 from pyspark.sql.window import Window
 
 
@@ -39,7 +38,7 @@ def load_and_process_data():
     # Convert timestamp column properly
     df = df.withColumn(
         "trans_date_trans_time",
-        to_timestamp(col("trans_date_trans_time"), "M/d/yyyy H:mm")
+        to_timestamp(col("trans_date_trans_time"))
     )
 
     # Handle missing values (empty strings -> null)
@@ -50,20 +49,41 @@ def load_and_process_data():
     for column in string_columns:
         df = df.withColumn(column, trim(col(column)))
 
-    # Drop rows with nulls in any important column
-    df = df.dropna(subset=[
-        "trans_date_trans_time",
-        "amt",
-        "category",
-        "lat",
-        "long",
-        "merch_lat",
-        "merch_long",
-        "cc_num",
-        "is_fraud"
-    ])
+    logger.info("Basic cleaning completed")
 
-    logger.info("Null and missing values handled strictly")
+    # -----------------------------
+    # Handle Missing Values
+    # Fill with mean instead of dropping
+    # -----------------------------
+ 
+    # Calculate mean for numeric columns
+    amt_mean      = df.select(mean(col("amt"))).first()[0]
+    lat_mean      = df.select(mean(col("lat"))).first()[0]
+    long_mean     = df.select(mean(col("long"))).first()[0]
+    merch_lat_mean = df.select(mean(col("merch_lat"))).first()[0]
+    merch_long_mean = df.select(mean(col("merch_long"))).first()[0]
+    city_pop_mean  = df.select(mean(col("city_pop"))).first()[0]
+ 
+    # Fill missing numeric values with mean
+    df = df.fillna({
+        "amt"       : amt_mean,
+        "lat"       : lat_mean,
+        "long"      : long_mean,
+        "merch_lat" : merch_lat_mean,
+        "merch_long": merch_long_mean,
+        "city_pop"  : city_pop_mean
+    })
+ 
+    # Fill missing string values with "Unknown"
+    df = df.fillna({
+        "category" : "Unknown",
+        "merchant" : "Unknown",
+        "city"     : "Unknown",
+        "state"    : "Unknown",
+        "gender"   : "Unknown"
+    })
+ 
+    logger.info("Missing values filled with mean (numeric) and Unknown (string)")
 
     # -----------------------------
     # Feature Engineering
@@ -74,20 +94,6 @@ def load_and_process_data():
         "is_weekend",
         when(dayofweek(col("trans_date_trans_time")).isin([1, 7]), 1).otherwise(0)
     )
-
-    # Break transaction timestamp up
-    df = df.withColumn("trans_year", year(col("trans_date_trans_time"))) \
-        .withColumn("trans_month", month(col("trans_date_trans_time"))) \
-        .withColumn("trans_day", day(col("trans_date_trans_time"))) \
-        .withColumn("trans_hour", hour(col("trans_date_trans_time"))) \
-        .withColumn("trans_minute", minute(col("trans_date_trans_time")))
-    
-    # Make time cyclical
-    df = df.withColumn("sin_hour", sin((col("trans_hour") * 2 * pi()) / 24)) \
-        .withColumn("cos_hour", cos((col("trans_hour") * 2 * pi()) / 24)) \
-        .withColumn("sin_minute", sin((col("trans_minute") * 2 * pi()) / 60)) \
-        .withColumn("cos_minute", cos((col("trans_minute") * 2 * pi()) / 60)) \
-        .drop("trans_hour").drop("trans_minute")
 
     # Distance calculation (Haversine)
     df = df.withColumn("lat1", radians(col("lat"))) \
@@ -107,6 +113,9 @@ def load_and_process_data():
 
     df = df.withColumn("distance_km", col("c") * 6371)
 
+    # Drop intermediate columns
+    df = df.drop("lat1", "lon1", "lat2", "lon2", "dlat", "dlon", "a", "c")
+
     # Average recent transaction amount per user
     window_spec = Window.partitionBy("cc_num").orderBy("trans_date_trans_time")
 
@@ -115,7 +124,16 @@ def load_and_process_data():
         avg("amt").over(window_spec.rowsBetween(-10, 0))
     )
 
-    logger.info("Feature engineering completed")
+    # Amount buckets
+    df = df.withColumn("amt_bucket",
+        when(col("amt") < 500,   "0-500")
+        .when(col("amt") < 1000,  "500-1000")
+        .when(col("amt") < 5000,  "1000-5000")
+        .when(col("amt") < 10000, "5000-10000")
+        .otherwise("10000+")
+    )
+ 
+    logger.info("Feature engineering completed — is_weekend, distance_km, avg_amt_recent, amt_bucket")
 
     # -----------------------------
     # EDA SECTION
@@ -165,21 +183,6 @@ def split_train_test(df):
 
     return train_df, test_df
 
-# -----------------------------
-# Create fraud weights to penalize missing fraud
-# -----------------------------
-def create_fraud_weight(train_df):
-
-    fraud_count = train_df.filter(col("is_fraud") == 1).count()
-    nonfraud_count = train_df.filter(col("is_fraud") == 0).count()
-
-    ratio = nonfraud_count / fraud_count
-
-    return train_df.withColumn(
-        "fraud_weight",
-        when(col("is_fraud") == 1, ratio).otherwise(1.0)
-    )
-
 
 # -----------------------------
 # Main execution
@@ -193,3 +196,6 @@ if __name__ == "__main__":
 
     print("\nTrain Count:", train_df.count())
     print("Test Count:", test_df.count())
+    print("\n===== Amount Bucket Sample =====")
+    train_df.groupBy("amt_bucket").count().orderBy("amt_bucket").show()
+ 

@@ -1,4 +1,6 @@
-# Utility functions
+import os
+# os.environ["JAVA_HOME"] = "/opt/homebrew/opt/openjdk@17"
+
 import logging
 from pyspark.sql import SparkSession
 
@@ -11,6 +13,11 @@ def get_spark_session(app_name="FraudDetectionProject"):
     spark = (
         SparkSession.builder
         .appName(app_name)
+        .config("spark.driver.memory", "4g")
+        .config("spark.executor.memory", "4g")
+        .config("spark.memory.fraction", "0.8")
+        .config("spark.memory.offHeap.enabled", "true")
+        .config("spark.memory.offHeap.size", "2g")
         .getOrCreate()
     )
 

@@ -1,4 +1,3 @@
-# Data transformations script placeholder
 from ingestion import load_and_process_data
 from pyspark.sql.functions import col, count, avg, sum, when, hour, rank
 from pyspark.sql.window import Window
