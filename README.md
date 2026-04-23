@@ -20,10 +20,10 @@
 
 An end-to-end Big Data analytics pipeline for credit card fraud detection built with Apache Spark. The pipeline integrates all four Spark components:
 
-- **Structured APIs** — data ingestion, cleaning, and feature engineering on 1.8 million transactions
-- **Spark SQL** — complex fraud pattern analysis with 6 non-trivial queries
-- **Spark Structured Streaming** — real-time transaction processing with 3 streaming queries
-- **MLlib** — Logistic Regression and Random Forest classification with evaluation metrics
+- **Structured APIs** : data ingestion, cleaning, and feature engineering on 1.8 million transactions
+- **Spark SQL** : complex fraud pattern analysis with 6 non-trivial queries
+- **Spark Structured Streaming** : real-time transaction processing with 3 streaming queries
+- **MLlib** : Logistic Regression and Random Forest classification with evaluation metrics
 
 Processes 1,852,394 transactions achieving **99.46% AUC-ROC** with Random Forest, catching **94% of all fraud cases** (2,028 out of 2,145).
 
@@ -308,10 +308,10 @@ Random Forest catches **20x more fraud** than Logistic Regression, reducing miss
 Fraudsters make small test transactions ($5-$10) in small cities on weekends to verify stolen card details. Our model identifies this pattern with high precision.
 
 **2. Late Night Fraud Spike**
-Hours 22-23 show a **2.6% fraud rate** — over 25x higher than daytime (0.1%). Real-time monitoring during these hours is critical.
+Hours 22-23 show a **2.6% fraud rate** over 25x higher than daytime (0.1%). Real-time monitoring during these hours is critical.
 
 **3. High-Value Transaction Risk**
-Transactions above $500 carry a **21.5% fraud rate** compared to only 0.27% for normal transactions — making them 79x more risky.
+Transactions above $500 carry a **21.5% fraud rate** compared to only 0.27% for normal transactions making them 79x more risky.
 
 **4. Top Fraud Categories**
 
@@ -342,8 +342,8 @@ spark_project_template/
 ├── data/
 │   ├── stream_input/                   # 5 streaming micro-batch files
 │   ├── streaming_data/                 # Notebook streaming data
-│   ├── CreditCard_Fraud_Train.csv      # Training data (80%) — NOT in GitHub
-│   ├── CreditCard_Fraud_Test.csv       # Test data (20%) — NOT in GitHub
+│   ├── CreditCard_Fraud_Train.csv      # Training data (80%) - NOT in GitHub
+│   ├── CreditCard_Fraud_Test.csv       # Test data (20%) - NOT in GitHub
 │   └── external.txt                    # External data references
 │
 ├── docs/
@@ -364,14 +364,6 @@ spark_project_template/
 │   ├── ml_pipeline.ipynb               # ML pipeline walkthrough
 │   ├── sql_queries.ipynb               # 9 complex SparkSQL queries
 │   └── streaming_demo.ipynb            # Streaming demonstration
-│
-├── outputs/
-│   ├── avg_transaction_amount.png      # Average transaction amount chart
-│   ├── eda_summary.png                 # EDA summary visualization
-│   ├── fraud_by_category.png           # Fraud rate by category
-│   ├── fraud_by_gender.png             # Fraud rate by gender
-│   ├── fraud_by_state.png              # Fraud rate by state
-│   └── fraud_vs_nonfraud.png           # Fraud vs legitimate distribution
 │
 ├── src/
 │   ├── __init__.py
@@ -417,7 +409,7 @@ spark_project_template/
 
 | Current Limitation                         | Proposed Solution                         |
 | ------------------------------------------ | ----------------------------------------- |
-| Synthetic dataset — limited fraud patterns | Train on real bank transaction data       |
+| Synthetic dataset - limited fraud patterns | Train on real bank transaction data       |
 | Class imbalance (0.52% fraud)              | Implement SMOTE oversampling              |
 | Static CSV streaming source                | Integrate with Apache Kafka               |
 | No hyperparameter tuning                   | Apply CrossValidator with ParamGrid       |
