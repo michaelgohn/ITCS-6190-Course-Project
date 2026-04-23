@@ -8,6 +8,7 @@ import os
 import shutil
 
 
+
 def run_streaming():
 
     spark = get_spark_session("Fraud-Streaming")
@@ -52,13 +53,13 @@ def run_streaming():
     # Apply Feature Engineering
     # -----------------------------
 
-    # Weekend indicator
+    # Feature 1: Weekend indicator
     stream_df = stream_df.withColumn(
         "is_weekend",
         when(dayofweek(col("trans_date_trans_time")).isin([1, 7]), 1).otherwise(0)
     )
 
-    # Distance between customer and merchant (Haversine formula)
+    # Feature 2: Distance between customer and merchant (Haversine formula)
     stream_df = stream_df \
         .withColumn("lat1", radians(col("lat"))) \
         .withColumn("lon1", radians(col("long"))) \
@@ -79,7 +80,7 @@ def run_streaming():
         .withColumn("distance_km", col("c") * 6371) \
         .drop("lat1", "lon1", "lat2", "lon2", "dlat", "dlon", "a", "c")
 
-    # Average recent transaction amount per card
+    # Feature 3: Average recent transaction amount per card
     window_spec = Window.partitionBy("cc_num").orderBy("trans_date_trans_time")
     stream_df = stream_df.withColumn(
         "avg_amt_recent",
@@ -91,6 +92,7 @@ def run_streaming():
 
     # -----------------------------
     # Save streaming data WITH features
+    # repartition ensures multiple files (simulate micro-batches)
     # -----------------------------
     stream_df = stream_df.repartition(5)
 
@@ -127,19 +129,19 @@ def run_streaming():
     # Streaming Queries
     # -----------------------------
 
-    # Fraud by category
+    # Query 1: Fraud by category
     fraud_by_category = enriched_df.groupBy("category").agg(
         sum("is_fraud").alias("fraud_txn"),
         count("*").alias("total_txn")
     )
 
-    # Fraud trend by hour
+    # Query 2: Fraud trend by hour
     fraud_by_hour = enriched_df.groupBy("txn_hour").agg(
         sum("is_fraud").alias("fraud_txn"),
         count("*").alias("total_txn")
     )
 
-    # High-value fraud detection
+    # Query 3: High-value fraud detection
     high_value_fraud = enriched_df.groupBy("high_value_flag").agg(
         sum("is_fraud").alias("fraud_txn"),
         count("*").alias("total_txn")
@@ -166,10 +168,14 @@ def run_streaming():
         .option("truncate", False) \
         .start()
 
-    # -----------------------------
-    # Keep alive
-    # -----------------------------
-    spark.streams.awaitAnyTermination()
+    #  Wait for queries then stop
+    query1.awaitTermination(timeout=40)
+    query2.awaitTermination(timeout=40)
+    query3.awaitTermination(timeout=40)
+
+    for q in spark.streams.active:
+        q.stop()
+    print("All streaming queries stopped!")
 
 
 if __name__ == "__main__":

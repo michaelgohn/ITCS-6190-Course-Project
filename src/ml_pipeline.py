@@ -1,7 +1,7 @@
 from utils import get_spark_session, get_logger
 from ingestion import load_and_process_data, split_train_test
 
-from pyspark.sql.functions import col as spark_col
+from pyspark.sql.functions import col as spark_col,when
 from pyspark.sql.types import (
     StructType, StructField, StringType, DoubleType,
     IntegerType, LongType, TimestampType, DateType
@@ -164,10 +164,17 @@ def run_ml_pipeline():
     print("\nLogistic Regression model saved to: models/fraud_lr_pipeline")
     logger.info(f"LR — AUC: {lr_metrics['auc']}, F1: {lr_metrics['f1']}")
 
+    # Add class weights to handle imbalance
+    train_df = train_df.withColumn(
+        "weight",
+        when(spark_col("is_fraud") == 1.0, 200.0)
+        .otherwise(1.0)
+    )
     # Model 2 — Random Forest (Improved)
     rf = RandomForestClassifier(
         featuresCol="scaled_features",
         labelCol="is_fraud",
+        weightCol="weight",
         numTrees=100,
         maxDepth=10,
         seed=42
@@ -260,9 +267,10 @@ def run_streaming_predictions():
 
     print(f"Is Streaming: {streaming_df.isStreaming}")
 
+    # Directly apply RF model — no feature engineering needed here!
     stream_predictions = rf_model.transform(streaming_df)
 
-    # All predictions
+    # Query 1: All predictions
     query1 = stream_predictions \
         .select("trans_num", "amt", "category",
                 "distance_km", "is_fraud", "prediction") \
@@ -277,7 +285,7 @@ def run_streaming_predictions():
     query1.awaitTermination(timeout=15)
     print("Query 1 complete!")
 
-    # Fraud alerts only
+    # Query 2: Fraud alerts only
     fraud_alerts = stream_predictions \
         .filter(spark_col("prediction") == 1.0) \
         .select("trans_num", "amt", "category",
@@ -313,11 +321,11 @@ def load_model(model_path):
 # -----------------------------
 if __name__ == "__main__":
 
-    # Train + Evaluate on static data
+    # Step 1: Train + Evaluate on static data
     lr_model, rf_model = run_ml_pipeline()
     print("\nML Pipeline completed successfully!")
 
-    # Real-time predictions on streaming data
+    # Step 2: Real-time predictions on streaming data
     print("\n" + "=" * 56)
     print("Starting Real-Time Streaming Predictions...")
     print("=" * 56)

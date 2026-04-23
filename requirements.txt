@@ -2,3 +2,4 @@ pyspark
 pandas
 matplotlib
 pytest
+streamlit

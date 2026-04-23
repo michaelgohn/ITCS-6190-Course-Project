@@ -1,6 +1,9 @@
 #!/bin/bash
+export PYTHONPATH=src
+
 set -e
-python src/ingestion.py
-python src/transformations.py
-python src/streaming.py
-python src/ml_pipeline.py
+python3 src/ingestion.py
+python3 src/transformations.py
+python3 src/streaming.py
+python3 src/ml_pipeline.py
+streamlit run app.py

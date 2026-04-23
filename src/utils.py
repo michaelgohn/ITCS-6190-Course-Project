@@ -1,5 +1,7 @@
+# Utility functions
+
 import os
-# os.environ["JAVA_HOME"] = "/opt/homebrew/opt/openjdk@17"
+os.environ["JAVA_HOME"] = "/opt/homebrew/opt/openjdk@17"
 
 import logging
 from pyspark.sql import SparkSession

@@ -8,20 +8,21 @@ import matplotlib.pyplot as plt
 # Page Config
 st.set_page_config(
     page_title="Credit Card Fraud Detection",
-    page_icon="",
     layout="wide"
 )
 
 st.title("Credit Card Fraud Detection Dashboard")
-st.markdown("**ITCS 6190 Cloud Computing for Data Analytics — Team 4**")
 st.markdown("---")
 
 
 # Initialize Spark + Load Model
-@st.cache_resource
 def get_spark_and_model():
     from pyspark.sql import SparkSession
     from pyspark.ml import PipelineModel
+
+    existing = SparkSession.getActiveSession()
+    if existing:
+        existing.stop()
 
     spark = SparkSession.builder \
         .appName("FraudDashboard") \
@@ -53,11 +54,11 @@ page = st.sidebar.radio("Go to", [
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### Dataset Info")
-st.sidebar.markdown("- **Source:** Kaggle (kartik2112)")
+st.sidebar.markdown("- **Source:** Kaggle")
 st.sidebar.markdown("- **Total Rows:** 1,852,394")
 st.sidebar.markdown("- **Fraud Rate:** 0.52%")
 st.sidebar.markdown("- **Best Model:** Random Forest")
-st.sidebar.markdown("- **AUC-ROC:** 0.9908")
+st.sidebar.markdown("- **AUC-ROC:** 0.9946")
 
 with st.spinner("Loading data..."):
     df = load_sample_data()
@@ -103,8 +104,11 @@ if page == "Data Overview":
 elif page == "Fraud Analysis":
 
     st.header("Fraud Analysis")
+    st.markdown("Visualizations based on Complex SparkSQL Queries and Transformations")
 
-    st.subheader("1. Fraud vs Legitimate")
+    # ── Chart 1: Fraud vs Legitimate ──
+    st.markdown("---")
+    st.subheader("1. Fraud vs Legitimate Distribution")
     col1, col2 = st.columns(2)
 
     with col1:
@@ -127,9 +131,11 @@ elif page == "Fraud Analysis":
         st.pyplot(fig)
         plt.close()
 
+    # ── Chart 2: Fraud Rate by Category (SQL Q2) ──
     st.markdown("---")
-
     st.subheader("2. Fraud Rate by Category")
+    st.caption("SparkSQL Query: GROUP BY category with fraud rate calculation")
+
     cat = df.groupby("category").agg(
         total=("is_fraud", "count"), fraud=("is_fraud", "sum")
     ).reset_index()
@@ -137,18 +143,21 @@ elif page == "Fraud Analysis":
     cat = cat.sort_values("fraud_rate", ascending=True)
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    bars = ax.barh(cat["category"], cat["fraud_rate"], color="#e74c3c")
+    colors = ["#e74c3c" if v > 0.5 else "#3498db" for v in cat["fraud_rate"]]
+    bars = ax.barh(cat["category"], cat["fraud_rate"], color=colors)
     ax.set_xlabel("Fraud Rate (%)")
-    ax.set_title("Fraud Rate by Category")
+    ax.set_title("Fraud Rate by Transaction Category")
     for bar, val in zip(bars, cat["fraud_rate"]):
         ax.text(val + 0.05, bar.get_y() + bar.get_height()/2,
                 f"{val}%", va="center", fontsize=8)
     st.pyplot(fig)
     plt.close()
 
+    # ── Chart 3: Fraud by Amount Bucket (SQL Q4) ──
     st.markdown("---")
-
     st.subheader("3. Fraud by Amount Bucket")
+    st.caption("SparkSQL Query: CASE WHEN for amount bucketing")
+
     df["amt_bucket"] = pd.cut(df["amt"],
         bins=[0, 100, 500, 1000, 5000, float("inf")],
         labels=["$0-100", "$100-500", "$500-1K", "$1K-5K", "$5K+"]
@@ -168,6 +177,148 @@ elif page == "Fraud Analysis":
     st.pyplot(fig)
     plt.close()
 
+    # ── Chart 4: Fraud by Hour of Day (Transformations Q2) ──
+    st.markdown("---")
+    st.subheader("4. Fraud Pattern by Hour of Day")
+    st.caption("Transformation Query: fraud trend analysis by transaction hour")
+
+    df["trans_hour"] = pd.to_datetime(
+        df["trans_date_trans_time"], errors="coerce"
+    ).dt.hour
+
+    hourly = df.groupby("trans_hour").agg(
+        total=("is_fraud", "count"),
+        fraud=("is_fraud", "sum")
+    ).reset_index()
+    hourly["fraud_rate"] = (hourly["fraud"] / hourly["total"] * 100).round(3)
+    hourly = hourly.dropna(subset=["trans_hour"])
+    hourly["trans_hour"] = hourly["trans_hour"].astype(int)
+
+    fig, ax = plt.subplots(figsize=(12, 4))
+    colors = ["#e74c3c" if h >= 22 or h <= 4 else "#3498db"
+              for h in hourly["trans_hour"]]
+    ax.bar(hourly["trans_hour"], hourly["fraud_rate"], color=colors)
+    ax.set_xlabel("Hour of Day")
+    ax.set_ylabel("Fraud Rate (%)")
+    ax.set_title("Fraud Rate by Hour of Day (Red = Night Hours)")
+    ax.set_xticks(range(0, 24))
+    st.pyplot(fig)
+    plt.close()
+
+    st.info("Key Finding: Fraud peaks at hours 22-23 (late night) and 1-3 (early morning)!")
+
+    # ── Chart 5: Distance Bucket Analysis (Transformations Q4) ──
+    st.markdown("---")
+    st.subheader("5. Distance-Based Fraud Analysis")
+    st.caption("Transformation Query: distance bucketed as Near/Medium/Far")
+
+    # Use hardcoded results from transformations.py output
+    distance_data = pd.DataFrame({
+        "Distance Bucket": ["Near (<50km)", "Medium (50-200km)", "Far (>200km)"],
+        "Fraud Rate (%)": [0.52, 0.51, 0.53],
+        "Total Transactions": [487293, 892451, 472650]
+    })
+
+    col1, col2 = st.columns(2)
+    with col1:
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.bar(distance_data["Distance Bucket"],
+               distance_data["Fraud Rate (%)"],
+               color=["#2ecc71", "#f39c12", "#e74c3c"])
+        ax.set_ylabel("Fraud Rate (%)")
+        ax.set_title("Fraud Rate by Distance")
+        ax.set_ylim(0, 1)
+        for i, v in enumerate(distance_data["Fraud Rate (%)"]):
+            ax.text(i, v + 0.01, f"{v}%", ha="center", fontweight="bold")
+        st.pyplot(fig)
+        plt.close()
+
+    with col2:
+        st.dataframe(distance_data)
+        st.info("""
+        Key Finding: Distance alone does not determine fraud!
+        Fraud rate is similar across all distance buckets.
+        Model uses distance COMBINED with other features.
+        """)
+
+    # ── Chart 6: High Value Fraud Impact (Transformations Q5) ──
+    st.markdown("---")
+    st.subheader("6. High Value Transaction Fraud Impact")
+    st.caption("Transformation Query: fraud impact of transactions above $500")
+
+    high_value_data = pd.DataFrame({
+        "Transaction Type": ["Normal (< $500)", "High Value (> $500)"],
+        "Total": [1847865, 4529],
+        "Fraud": [8426, 1225],
+        "Fraud Rate (%)": [0.46, 27.05]
+    })
+
+    col1, col2 = st.columns(2)
+    with col1:
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.bar(high_value_data["Transaction Type"],
+               high_value_data["Fraud Rate (%)"],
+               color=["#2ecc71", "#e74c3c"])
+        ax.set_ylabel("Fraud Rate (%)")
+        ax.set_title("Fraud Rate: Normal vs High Value")
+        for i, v in enumerate(high_value_data["Fraud Rate (%)"]):
+            ax.text(i, v + 0.3, f"{v}%", ha="center", fontweight="bold")
+        st.pyplot(fig)
+        plt.close()
+
+    with col2:
+        st.dataframe(high_value_data)
+        st.error("""
+        Key Finding: High value transactions (>$500) have
+        27% fraud rate vs only 0.46% for normal transactions!
+        High value = 58x more likely to be fraud!
+        """)
+
+    # ── Chart 7: Gender Fraud Analysis (SQL Q7) ──
+    st.markdown("---")
+    st.subheader("7. Fraud Analysis by Gender")
+    st.caption("SparkSQL Query: fraud rate grouped by gender")
+
+    gender_fraud = df.groupby("gender").agg(
+        total=("is_fraud", "count"),
+        fraud=("is_fraud", "sum")
+    ).reset_index()
+    gender_fraud["fraud_rate"] = (
+        gender_fraud["fraud"] / gender_fraud["total"] * 100
+    ).round(2)
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.bar(gender_fraud["gender"], gender_fraud["fraud_rate"],
+           color=["#9b59b6", "#f39c12"])
+    ax.set_xlabel("Gender")
+    ax.set_ylabel("Fraud Rate (%)")
+    ax.set_title("Fraud Rate by Gender")
+    for i, v in enumerate(gender_fraud["fraud_rate"]):
+        ax.text(i, v + 0.01, f"{v}%", ha="center", fontweight="bold")
+    st.pyplot(fig)
+    plt.close()
+
+    # ── Chart 8: Weekend vs Weekday Fraud ──
+    st.markdown("---")
+    st.subheader("8. Weekend vs Weekday Fraud")
+    st.caption("Feature Engineering: is_weekend indicator analysis")
+
+    weekend_data = pd.DataFrame({
+        "Day Type": ["Weekday", "Weekend"],
+        "Avg Fraud Rate (%)": [0.5273, 0.5080]
+    })
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.bar(weekend_data["Day Type"], weekend_data["Avg Fraud Rate (%)"],
+           color=["#3498db", "#e74c3c"])
+    ax.set_ylabel("Avg Fraud Rate (%)")
+    ax.set_title("Fraud Rate: Weekday vs Weekend")
+    ax.set_ylim(0.49, 0.54)
+    for i, v in enumerate(weekend_data["Avg Fraud Rate (%)"]):
+        ax.text(i, v + 0.001, f"{v}%", ha="center", fontweight="bold")
+    st.pyplot(fig)
+    plt.close()
+
 
 # PAGE 3: Distance Analysis
 elif page == "Distance Analysis":
@@ -176,7 +327,7 @@ elif page == "Distance Analysis":
 
     st.info("""
     Just like Gmail alerts you when someone logs in from an unusual location,
-    our system flags transactions where the merchant is unusually far 
+    our system flags transactions where the merchant is unusually far
     from the customer's home location.
     """)
 
@@ -193,7 +344,7 @@ elif page == "Distance Analysis":
         Location: Tokyo, Japan
         Device: Unknown laptop
         Time: 3:00 AM
-        
+
         Was this you?
         [YES]  [NO - Secure Account]
         ```
@@ -208,9 +359,9 @@ elif page == "Distance Analysis":
         Distance: 13,000 km from home
         Amount: $1,500
         Time: 3:00 AM (Weekend)
-        
+
         ML Model: FRAUD DETECTED
-        Confidence: 99.08%
+        Confidence: 99.46%
         Action: Transaction BLOCKED
         ```
         """)
@@ -286,7 +437,6 @@ df = df.withColumn("distance_km", col("c") * 6371)
 elif page == "Live Prediction":
 
     st.header("Live Fraud Prediction")
-    st.markdown("Enter transaction details below to get an instant fraud prediction.")
     st.markdown("---")
 
     col1, col2 = st.columns(2)
@@ -294,7 +444,8 @@ elif page == "Live Prediction":
     with col1:
         st.subheader("Transaction Details")
         amt = st.number_input("Transaction Amount ($)",
-                              min_value=1.0, max_value=30000.0, value=100.0, step=10.0)
+                              min_value=1.0, max_value=30000.0,
+                              value=100.0, step=10.0)
         category = st.selectbox("Category", [
             "gas_transport", "grocery_pos", "home", "shopping_pos",
             "kids_pets", "shopping_net", "entertainment", "food_dining",
@@ -306,17 +457,27 @@ elif page == "Live Prediction":
                                   format_func=lambda x: "Yes" if x == 1 else "No")
 
     with col2:
-        st.subheader("Location Details")
+        st.subheader("Location and History Details")
         distance_km = st.slider(
             "Distance from Home to Merchant (km)",
             min_value=0, max_value=15000, value=50, step=10
         )
         city_pop = st.number_input("City Population",
-                                   min_value=100, max_value=3000000, value=50000)
+                                   min_value=100, max_value=3000000,
+                                   value=50000)
         avg_amt_recent = st.number_input(
             "Your Average Recent Transaction ($)",
             min_value=1.0, max_value=5000.0, value=70.0
         )
+
+        spike_ratio = amt / avg_amt_recent
+        st.markdown("### Spending Alert:")
+        if spike_ratio > 10:
+            st.error(f"Amount is {spike_ratio:.0f}x higher than usual — Very suspicious!")
+        elif spike_ratio > 3:
+            st.warning(f"Amount is {spike_ratio:.0f}x higher than usual — Unusual spending!")
+        else:
+            st.success(f"Amount is {spike_ratio:.1f}x of usual — Normal spending")
 
         st.markdown("### Distance Alert:")
         if distance_km > 5000:
@@ -370,6 +531,8 @@ elif page == "Live Prediction":
                     | Legitimate Probability | {legit_prob}% |
                     | Distance from Home | {distance_km:,} km |
                     | Amount | ${amt:,.2f} |
+                    | Avg Recent Amount | ${avg_amt_recent:,.2f} |
+                    | Spending Spike | {spike_ratio:.1f}x of usual |
                     | Category | {category} |
 
                     Recommended Action: BLOCK this transaction and alert customer.
@@ -386,6 +549,7 @@ elif page == "Live Prediction":
                     | Fraud Probability | {fraud_prob}% |
                     | Distance from Home | {distance_km} km |
                     | Amount | ${amt:,.2f} |
+                    | Avg Recent Amount | ${avg_amt_recent:,.2f} |
                     | Category | {category} |
 
                     Recommended Action: APPROVE this transaction.
@@ -395,16 +559,8 @@ elif page == "Live Prediction":
                 st.error(f"Error: {str(e)}")
                 st.info("Make sure models are saved in models/ folder.")
 
-    st.markdown("---")
-    st.markdown("### Sample Test Cases:")
-    test_cases = pd.DataFrame({
-        "Test Case": ["Normal purchase", "Suspicious purchase", "Fraud attempt"],
-        "Amount": ["$50", "$200", "$1,500"],
-        "Distance": ["5 km", "500 km", "13,000 km"],
-        "Category": ["grocery_pos", "shopping_net", "shopping_net"],
-        "Expected Result": ["Legitimate", "Check", "Fraud"]
-    })
-    st.dataframe(test_cases)
+
+
 
 
 # PAGE 5: Model Comparison
@@ -416,7 +572,7 @@ elif page == "Model Comparison":
     comparison = pd.DataFrame({
         "Metric": ["AUC-ROC", "Accuracy", "Precision", "Recall", "F1 Score"],
         "Logistic Regression": [0.9514, 0.9956, 0.9932, 0.9956, 0.9942],
-        "Random Forest":       [0.9908, 0.9975, 0.9973, 0.9975, 0.9974]
+        "Random Forest":       [0.9946, 0.9875, 0.9968, 0.9875, 0.9912]
     })
     st.dataframe(comparison)
 
@@ -459,25 +615,24 @@ elif page == "Model Comparison":
         st.metric("False Alarms", "411")
 
     with col2:
-        st.markdown("### Random Forest (Best Model)")
-        st.metric("Fraud Caught", "1,207", "+1,106")
-        st.metric("Fraud Missed", "938", "-1,106")
-        st.metric("False Alarms", "427")
+        st.markdown("### Random Forest with Class Weights (Best Model)")
+        st.metric("Fraud Caught", "2,028", "+1,927")
+        st.metric("Fraud Missed", "117", "-1,927")
+        st.metric("False Alarms", "6,857")
 
     st.markdown("---")
 
     st.success("""
-    Why Random Forest is Better:
-    - Catches 12x more fraud than Logistic Regression (1,207 vs 101)
-    - AUC improved from 0.9514 to 0.9908
-    - Handles non-linear relationships in fraud patterns
-    - Uses distance, amount, category, and time features together
+    Why Random Forest with Class Weights is Better:
+    - Catches 20x more fraud than Logistic Regression (2,028 vs 101)
+    - AUC improved from 0.9514 to 0.9946
+    - Class weights (200x for fraud) handle class imbalance
+    - Missed fraud reduced from 2,044 to only 117
     """)
 
     st.info("""
     Next Steps for Improvement:
     - Handle class imbalance using SMOTE oversampling
-    - Hyperparameter tuning for better recall
-    - Integrate with streaming for real-time alerts
+    - Hyperparameter tuning for better precision/recall balance
     - Add more features based on user behavior patterns
     """)

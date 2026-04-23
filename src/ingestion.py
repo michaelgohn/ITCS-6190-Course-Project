@@ -53,7 +53,6 @@ def load_and_process_data():
 
     # -----------------------------
     # Handle Missing Values
-    # Fill with mean instead of dropping
     # -----------------------------
  
     # Calculate mean for numeric columns
@@ -124,7 +123,7 @@ def load_and_process_data():
         avg("amt").over(window_spec.rowsBetween(-10, 0))
     )
 
-    # Amount buckets
+    # 2: Amount buckets
     df = df.withColumn("amt_bucket",
         when(col("amt") < 500,   "0-500")
         .when(col("amt") < 1000,  "500-1000")
