@@ -185,7 +185,7 @@ java -version
    https://adoptium.net/temurin/releases/?version=17
 
 2. Set JAVA_HOME in Environment Variables:
-   JAVA_HOME = C:\Program Files\Path to Java Folder\jdk-17.x.x
+   JAVA_HOME = C:/Program Files/Path to Java Folder/jdk-17.x.x
 
 3. Download winutils.exe and hadoop.dll for Hadoop (required on Windows):
    https://github.com/cdarlint/winutils/tree/master/hadoop-3.3.5/bin
@@ -203,6 +203,8 @@ java -version
 ### Step 2 — Install Python Dependencies
 
 ```bash
+python -m venv venv
+source venv/bin/activate
 make install
 ```
 

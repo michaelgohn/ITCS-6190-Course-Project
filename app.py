@@ -1,5 +1,12 @@
 import os
-os.environ["JAVA_HOME"] = "/opt/homebrew/opt/openjdk@17"
+from dotenv import load_dotenv
+
+load_dotenv()
+
+if not os.getenv("JAVA_HOME"):
+    print("-" * 30)
+    print("JAVA_HOME is not set. Spark may fail if Java is not already configured.")
+    print("-" * 30)
 
 import streamlit as st
 import pandas as pd

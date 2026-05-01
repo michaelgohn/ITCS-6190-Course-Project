@@ -1,5 +1,5 @@
 install:
-	pip install pyspark streamlit matplotlib pandas
+	pip install pyspark streamlit matplotlib pandas python-dotenv
 
 ingestion:
 	PYTHONPATH=src python3 src/ingestion.py
