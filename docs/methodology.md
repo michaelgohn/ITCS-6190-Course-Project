@@ -1,5 +1,6 @@
 # Methodology
 1. Overview
+
 This project follows an end-to-end big data analytics methodology for detecting fraudulent credit card transactions using Apache Spark. The methodology is designed to cover the complete data processing lifecycle, starting from raw data ingestion and ending with machine learning-based fraud prediction and dashboard visualization.
 The project pipeline includes the following major stages:
 Data ingestion
