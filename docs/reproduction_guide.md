@@ -40,17 +40,12 @@ pandas
 matplotlib
 pytest
 streamlit
+python-dotenv
 ```
 
 Install the dependencies using one of the following methods.
 
-### Option 1: Install using Makefile
-
-```bash
-make install
-```
-
-### Option 2: Install manually
+### Install manually
 
 ```bash
 pip install -r requirements.txt
@@ -105,16 +100,24 @@ Expected output should show Java 17.
 1. Download Java 17 from Adoptium or Oracle.
 2. Install Java 17.
 3. Set the `JAVA_HOME` environment variable to the Java installation folder.
-4. Add Java `bin` folder to the system `PATH`.
-5. Verify installation:
+4. Download winutils.exe and hadoop.dll for Hadoop (required on Windows)
+5. Place winutils.exe and hadoop.dll in: C:\hadoop\bin\
+6. Set HADOOP_HOME in Environment Variables
+7. Add Java `bin` folder to the system `PATH`.
+8. Verify installation:
 
 ```powershell
 java -version
 ```
 
-### Important Note
+### Create .env File
 
 The files `utils.py` and `app.py` include the following Java path:
+
+```cp .env-example .env```
+change JAVA_HOME to Java installation folder
+
+change HADOOP_HOME to hadoop folder if necessary
 
 ```python
 os.environ["JAVA_HOME"] = "/opt/homebrew/opt/openjdk@17"
