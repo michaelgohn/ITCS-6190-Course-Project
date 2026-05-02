@@ -21,7 +21,7 @@ More advanced imbalance techniques such as SMOTE, ADASYN, or ensemble balancing 
 ---
 
 
-## 4. Limited Feature Set
+## 3. Limited Feature Set
 The model relies on a relatively small set of engineered features:
 amt, city_pop, is_weekend, distance_km,
 avg_amt_recent, category_index, gender_index
