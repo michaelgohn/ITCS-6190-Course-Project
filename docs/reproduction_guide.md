@@ -112,18 +112,11 @@ java -version
 
 ### Create .env File
 
-The files `utils.py` and `app.py` include the following Java path:
+Run the command  - ```cp .env-example .env```
 
-```cp .env-example .env```
 change JAVA_HOME to Java installation folder
 
 change HADOOP_HOME to hadoop folder if necessary
-
-```python
-os.environ["JAVA_HOME"] = "/opt/homebrew/opt/openjdk@17"
-```
-
-This path is valid for macOS with Homebrew. If running on Windows or another environment, update this value or remove it and configure `JAVA_HOME` directly in the operating system.
 
 ---
 
