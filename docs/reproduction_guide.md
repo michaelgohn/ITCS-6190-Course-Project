@@ -114,9 +114,9 @@ java -version
 
 Run the command  - ```cp .env-example .env```
 
-change JAVA_HOME to Java installation folder
+Change JAVA_HOME to Java installation folder
 
-change HADOOP_HOME to hadoop folder if necessary
+Change HADOOP_HOME to hadoop folder if necessary
 
 ---
 
