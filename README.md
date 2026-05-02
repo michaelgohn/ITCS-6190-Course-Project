@@ -173,6 +173,7 @@ brew install openjdk@17
 
 # Set JAVA_HOME
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17
+export PATH=$JAVA_HOME/bin:$PATH
 
 # Verify
 java -version
@@ -207,17 +208,15 @@ java -version
 
 ### Step 2 — Install Python Dependencies
 
-```bash
+```bash (mac)
 python -m venv venv
 source venv/bin/activate
-make install
+pip install -r requirements.txt
 ```
 
-Or manually:
-
-```bash
+```bash (windows)
 python -m venv venv
-source venv/bin/activate
+source venv/Scripts/activate
 pip install -r requirements.txt
 ```
 
@@ -234,7 +233,7 @@ pip install -r requirements.txt
    fraudTest.csv  → CreditCard_Fraud_Test.csv
 
 3. Place both files in:
-   spark_project_template/data/
+   <spark_project_root>/data/
 ```
 
 ---
