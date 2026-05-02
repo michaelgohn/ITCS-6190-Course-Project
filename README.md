@@ -173,6 +173,7 @@ brew install openjdk@17
 
 # Set JAVA_HOME
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17
+export PATH=$JAVA_HOME/bin:$PATH
 
 # Verify
 java -version
@@ -185,16 +186,21 @@ java -version
    https://adoptium.net/temurin/releases/?version=17
 
 2. Set JAVA_HOME in Environment Variables:
-   JAVA_HOME = C:\Program Files\Path to Java Folder\jdk-17.x.x
+   JAVA_HOME="C:/Program Files/<path-to-java-folder>/jdk-17.x.x"
 
 3. Download winutils.exe and hadoop.dll for Hadoop (required on Windows):
    https://github.com/cdarlint/winutils/tree/master/hadoop-3.3.5/bin
    Place winutils.exe and hadoop.dll in: C:\hadoop\bin\
 
 4. Set HADOOP_HOME in Environment Variables:
-   HADOOP_HOME = C:\hadoop
+   HADOOP_HOME="C:/hadoop"
 
-5. Verify:
+5. Set environment variables in terminal
+   export JAVA_HOME="/c/Program Files/<path-to-java-folder>/jdk-17.x.x"
+   export HADOOP_HOME="/c/hadoop"
+   export PATH="$JAVA_HOME/bin:$HADOOP_HOME/bin:$PATH"
+
+6. Verify:
    java -version
 ```
 
@@ -202,15 +208,15 @@ java -version
 
 ### Step 2 — Install Python Dependencies
 
-```bash
-make install
-```
-
-Or manually:
-
-```bash
+```bash (mac)
 python -m venv venv
 source venv/bin/activate
+pip install -r requirements.txt
+```
+
+```bash (windows)
+python -m venv venv
+source venv/Scripts/activate
 pip install -r requirements.txt
 ```
 
@@ -227,7 +233,7 @@ pip install -r requirements.txt
    fraudTest.csv  → CreditCard_Fraud_Test.csv
 
 3. Place both files in:
-   spark_project_template/data/
+   <spark_project_root>/data/
 ```
 
 ---
