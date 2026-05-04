@@ -189,6 +189,7 @@ The system successfully simulates real-time streaming using micro-batch processi
 ### Key Findings
 
 - Random Forest achieves **higher AUC-ROC (0.9954)**
+  - We attempted to get the AUC-ROC score to be lower however this would require eliminating the use of some of the best features in our dataset.
 - Logistic Regression has slightly higher accuracy due to imbalance
 - Random Forest detects **20x more fraud cases (2033 vs 101)**
 - Random Forest significantly reduces missed fraud

@@ -99,11 +99,11 @@ Expected output should show Java 17.
 
 1. Download Java 17 from Adoptium or Oracle.
 2. Install Java 17.
-3. Set the `JAVA_HOME` environment variable to the Java installation folder.
+3. Set the `JAVA_HOME` environment variable to the Java installation folder in your terminal.
 4. Download winutils.exe and hadoop.dll for Hadoop (required on Windows)
 5. Place winutils.exe and hadoop.dll in: C:\hadoop\bin\
-6. Set HADOOP_HOME in Environment Variables
-7. Add Java `bin` folder to the system `PATH`.
+6. Set HADOOP_HOME in to your hadoop folder in your terminal
+7. Add Java `bin` folder and Hadoop `bin` folder to the terminal `PATH`.
 8. Verify installation:
 
 ```powershell
@@ -112,7 +112,7 @@ java -version
 
 ### Create .env File
 
-Run the command  - ```cp .env-example .env```
+Run the command  - ```cp .env.example .env```
 
 Change JAVA_HOME to Java installation folder
 
